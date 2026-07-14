@@ -1,0 +1,9 @@
+# Binaries
+/examples/cli/cli
+*.test
+*.out
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
