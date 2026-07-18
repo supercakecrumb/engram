@@ -1,0 +1,57 @@
+name: Release
+
+# Triggered by pushing a tag matching "v*". engram is a library — this only
+# creates a GitHub Release, no container image (see
+# vibe/geodrill-v2-architecture.md §7.1 in the geodrill repo).
+#
+# Release-notes strategy (documented per the CI/CD design brief, which asked
+# to pick one of "CHANGELOG.md section" or "`changie latest` output" and
+# document the choice here): we extract the tag's version section verbatim
+# from CHANGELOG.md. This repo's release process is expected to run
+# `changie batch <version>` + `changie merge` (which writes a
+# "## <version> - <date>" section per .changie.yaml's versionFormat) and
+# commit that BEFORE the tag is pushed, so by the time this workflow runs the
+# tag's section already exists in CHANGELOG.md. We chose this over
+# `changie latest` (which only echoes a version *number*, not release notes)
+# because it needs no changie invocation in CI itself and reuses the exact
+# text a human already reviewed in the merge commit.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## " ver { found=1; next }
+            found && /^## / { found=0 }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "::error::No CHANGELOG.md section found for tag $VERSION. Run \`changie batch $VERSION\` and \`changie merge\`, commit that, then tag." >&2
+            exit 1
+          fi
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        if: ${{ !env.ACT }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file release_notes.md
