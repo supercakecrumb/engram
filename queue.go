@@ -66,6 +66,54 @@ func NextDue(items []QueueItem, newIntroducedToday int, cfg QueueConfig, now tim
 	return next, true
 }
 
+// NextReview picks the next due card from items, all of which already carry
+// an FSRS card (Lifecycle Introduced or Reviewing — the app filters
+// New/Known out before calling). A due review/relearning card wins by
+// earliest Due; otherwise the earliest-due Learning-or-New card. There is NO
+// daily-new cap: novelty is gated upstream at introduction. ok=false means
+// nothing is due at now.
+func NextReview(items []QueueItem, now time.Time) (QueueItem, bool) {
+	// Pass 1: earliest-due Review/Relearning candidate.
+	var due QueueItem
+	dueFound := false
+	for _, it := range items {
+		if it.Card.State != StateReview && it.Card.State != StateRelearning {
+			continue
+		}
+		if it.Card.Due.After(now) {
+			continue
+		}
+		if !dueFound || it.Card.Due.Before(due.Card.Due) {
+			due = it
+			dueFound = true
+		}
+	}
+	if dueFound {
+		return due, true
+	}
+
+	// Pass 2: earliest-due Learning-or-New candidate. No cap: the daily-new
+	// gate lives upstream at introduction time in v2.
+	var next QueueItem
+	nextFound := false
+	for _, it := range items {
+		if it.Card.State != StateLearning && it.Card.State != StateNew {
+			continue
+		}
+		if it.Card.Due.After(now) {
+			continue
+		}
+		if !nextFound || it.Card.Due.Before(next.Card.Due) {
+			next = it
+			nextFound = true
+		}
+	}
+	if !nextFound {
+		return QueueItem{}, false
+	}
+	return next, true
+}
+
 // CountNewIntroduced counts entries in log whose StateBefore is StateNew and
 // whose ReviewedAt falls on the same calendar day as now, both converted to
 // loc (nil defaults to time.UTC).

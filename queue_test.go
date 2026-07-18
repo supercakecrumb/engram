@@ -130,6 +130,99 @@ func TestCountNewIntroducedNilLocDefaultsToUTC(t *testing.T) {
 	}
 }
 
+func TestNextReviewDueReviewBeatsLearning(t *testing.T) {
+	items := []QueueItem{
+		{Skill: Skill{ID: "learning"}, Card: CardState{State: StateLearning, Due: queueNow.Add(-time.Hour)}},
+		{Skill: Skill{ID: "new"}, Card: CardState{State: StateNew, Due: queueNow.Add(-time.Hour)}},
+		{Skill: Skill{ID: "due-review"}, Card: CardState{State: StateReview, Due: queueNow.Add(-30 * time.Minute)}},
+		{Skill: Skill{ID: "due-relearning"}, Card: CardState{State: StateRelearning, Due: queueNow.Add(-45 * time.Minute)}},
+	}
+
+	got, ok := NextReview(items, queueNow)
+	if !ok {
+		t.Fatalf("ok = false, want true")
+	}
+	if got.Skill.ID != "due-relearning" {
+		t.Errorf("Skill.ID = %q, want %q (earliest-due Review/Relearning beats Learning/New)", got.Skill.ID, "due-relearning")
+	}
+}
+
+func TestNextReviewEarliestDueTiebreak(t *testing.T) {
+	items := []QueueItem{
+		{Skill: Skill{ID: "later"}, Card: CardState{State: StateReview, Due: queueNow.Add(-30 * time.Minute)}},
+		{Skill: Skill{ID: "earliest"}, Card: CardState{State: StateReview, Due: queueNow.Add(-2 * time.Hour)}},
+		{Skill: Skill{ID: "not-yet-due"}, Card: CardState{State: StateReview, Due: queueNow.Add(time.Hour)}},
+	}
+
+	got, ok := NextReview(items, queueNow)
+	if !ok {
+		t.Fatalf("ok = false, want true")
+	}
+	if got.Skill.ID != "earliest" {
+		t.Errorf("Skill.ID = %q, want %q", got.Skill.ID, "earliest")
+	}
+}
+
+// TestNextReviewLearningOrNewNoCap proves there is no daily-new cap: many
+// StateNew cards due now are all eligible, and the earliest-due one (whether
+// New or Learning) wins when nothing is in Review/Relearning.
+func TestNextReviewLearningOrNewNoCap(t *testing.T) {
+	items := []QueueItem{
+		{Skill: Skill{ID: "new-1"}, Card: CardState{State: StateNew, Due: queueNow.Add(-time.Hour)}},
+		{Skill: Skill{ID: "new-2"}, Card: CardState{State: StateNew, Due: queueNow.Add(-time.Minute)}},
+		{Skill: Skill{ID: "new-earliest"}, Card: CardState{State: StateNew, Due: queueNow.Add(-3 * time.Hour)}},
+		{Skill: Skill{ID: "learning-not-due"}, Card: CardState{State: StateLearning, Due: queueNow.Add(time.Hour)}},
+	}
+
+	got, ok := NextReview(items, queueNow)
+	if !ok {
+		t.Fatalf("ok = false, want true")
+	}
+	if got.Skill.ID != "new-earliest" {
+		t.Errorf("Skill.ID = %q, want %q (earliest-due New card, no cap gating it out)", got.Skill.ID, "new-earliest")
+	}
+}
+
+func TestNextReviewLearningBeatsNotYetDueReview(t *testing.T) {
+	items := []QueueItem{
+		{Skill: Skill{ID: "review-not-due"}, Card: CardState{State: StateReview, Due: queueNow.Add(time.Hour)}},
+		{Skill: Skill{ID: "due-learning"}, Card: CardState{State: StateLearning, Due: queueNow.Add(-time.Minute)}},
+	}
+
+	got, ok := NextReview(items, queueNow)
+	if !ok {
+		t.Fatalf("ok = false, want true")
+	}
+	if got.Skill.ID != "due-learning" {
+		t.Errorf("Skill.ID = %q, want %q (a not-yet-due Review card must not win over a due Learning card)", got.Skill.ID, "due-learning")
+	}
+}
+
+func TestNextReviewNothingDue(t *testing.T) {
+	items := []QueueItem{
+		{Skill: Skill{ID: "future-review"}, Card: CardState{State: StateReview, Due: queueNow.Add(time.Hour)}},
+		{Skill: Skill{ID: "future-new"}, Card: CardState{State: StateNew, Due: queueNow.Add(time.Hour)}},
+	}
+
+	got, ok := NextReview(items, queueNow)
+	if ok {
+		t.Fatalf("ok = true, want false when nothing is due")
+	}
+	if got != (QueueItem{}) {
+		t.Errorf("QueueItem = %+v, want zero value", got)
+	}
+}
+
+func TestNextReviewEmptyItems(t *testing.T) {
+	got, ok := NextReview(nil, queueNow)
+	if ok {
+		t.Fatalf("ok = true, want false for empty items")
+	}
+	if got != (QueueItem{}) {
+		t.Errorf("QueueItem = %+v, want zero value", got)
+	}
+}
+
 func TestCountNewIntroducedIgnoresNonNewState(t *testing.T) {
 	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	log := []Review{
