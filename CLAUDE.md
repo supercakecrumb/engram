@@ -8,6 +8,7 @@ Storage- and domain-agnostic spaced-repetition engine for Go — decks, due queu
 - **One atomic commit per logical change, pushed immediately.** Never batch. Every commit builds, `go vet`-clean, tests green.
 - **changie** manages the changelog: fragment per user-facing change in the same commit; `changie batch` + `changie merge` at each version tag; push tags to origin.
 - Never rewrite pushed history.
+- **Tell Aurora everything, in Telegram.** Every commit auto-notifies her via the post-commit hook (`scripts/githooks/`, self-installed by `scripts/pre-commit.sh`; token read from the sibling geodrill `.env`). Milestones get a manual `./scripts/notify.sh "<text>"`.
 
 ## Rules
 
