@@ -1,3 +1,0 @@
-kind: Added
-body: 'quiz.TextMatcher (quiz/text.go) for free-text ModeText grading: normalized (Unicode casefold + whitespace collapse) fuzzy match against an accept list within a Levenshtein tolerance. Exported Normalize and Levenshtein utilities, hand-rolled with no new dependency'
-time: 2026-07-18T12:04:00.000000000-00:00

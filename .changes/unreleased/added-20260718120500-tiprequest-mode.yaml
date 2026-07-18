@@ -1,3 +1,0 @@
-kind: Added
-body: 'TipRequest gains a Mode field (additive; zero value = ModeSingle), so tip providers can tailor explanations to Set/Text exercises without breaking existing ModeSingle-only providers'
-time: 2026-07-18T12:05:00.000000000-00:00

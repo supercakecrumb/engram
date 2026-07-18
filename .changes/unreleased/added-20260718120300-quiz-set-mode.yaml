@@ -1,3 +1,0 @@
-kind: Added
-body: 'quiz.Mode (Single/Set/Text) and set-choice exercises (quiz/set.go): KeySet, CanonSet, SetOption, SetExercise, GenerateSet, GradeIndex for grading by set-equality via index-based callbacks'
-time: 2026-07-18T12:03:00.000000000-00:00
