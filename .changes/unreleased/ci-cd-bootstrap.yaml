@@ -1,0 +1,2 @@
+kind: Added
+body: Bootstrap GitHub Actions CI (lint + build/vet/test) and a tag-triggered GitHub Release workflow.

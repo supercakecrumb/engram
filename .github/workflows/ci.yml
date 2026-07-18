@@ -1,0 +1,58 @@
+name: CI
+
+# engram is a pure library (no DB, no service dependencies), so this workflow
+# is intentionally simple: lint + build/vet/test on every push and PR against
+# master. See vibe/geodrill-v2-architecture.md §7.1 in the geodrill repo for
+# the design this implements.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # Pinned explicitly rather than left to the local dev tool version
+      # (2.5.0): that binary is built with go1.25 and cannot lint code that
+      # targets `go 1.26` (go.mod) — it fails fast with "the Go language
+      # version (go1.25) used to build golangci-lint is lower than the
+      # targeted Go version (1.26)". v2.12.2 is built with go1.26.2 and lints
+      # this module cleanly; no .golangci.yml override is needed here (the
+      # default standard linter set already passes on current master).
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test (race)
+        run: go test -race ./...
