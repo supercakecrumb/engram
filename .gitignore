@@ -3,6 +3,10 @@
 *.test
 *.out
 
+# Secrets / logs
+.env
+*.log
+
 # Editor / OS
 .DS_Store
 .idea/
