@@ -1,0 +1,3 @@
+kind: Added
+body: 'Introduction API (IntroOutcome, Scheduler.Introduce, Scheduler.SeedCardKnown) and daily-budget helpers (IntroItem, IntroConfig, NextIntroductions, RemainingIntroBudget) for gating new items before they enter FSRS review'
+time: 2026-07-18T12:01:00.000000000-00:00
