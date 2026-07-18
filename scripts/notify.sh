@@ -10,7 +10,6 @@ set -uo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="$repo_root/../../PersonalProjects/geodrill/.env"
-chat_id="371532208"
 
 if [ ! -f "$env_file" ]; then
   echo "notify: geodrill .env not found — skipping" >&2
@@ -22,8 +21,16 @@ set -a
 source "$env_file"
 set +a
 
+# Token and recipient chat id both come from the sibling geodrill .env
+# (gitignored) — never from tracked source, since both repos are public.
 if [ -z "${TELEGRAM_TOKEN:-}" ]; then
   echo "notify: TELEGRAM_TOKEN not set — skipping" >&2
+  exit 0
+fi
+
+chat_id="${TELEGRAM_CHAT_ID:-}"
+if [ -z "$chat_id" ]; then
+  echo "notify: TELEGRAM_CHAT_ID not set in .env — skipping" >&2
   exit 0
 fi
 
