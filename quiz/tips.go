@@ -10,6 +10,7 @@ type TipRequest struct {
 	ChosenKey      string // key the user picked (== CorrectKey when right)
 	ChosenLabel    string // display label of the picked option
 	Correct        bool
+	Mode           Mode // additive; zero value = ModeSingle, so existing providers are unaffected
 }
 
 // TipProvider produces an explanatory tip for an answered exercise —

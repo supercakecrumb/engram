@@ -52,3 +52,24 @@ var (
 	_ TipProvider = TipFunc(nil)
 	_ TipProvider = StaticTips(nil)
 )
+
+// TestTipRequestModeIsAdditive checks that Mode is additive: a zero-value
+// TipRequest (as every pre-v0.3.0 caller constructs) defaults to
+// ModeSingle, and a provider observes whatever Mode the caller does set.
+func TestTipRequestModeIsAdditive(t *testing.T) {
+	var zero TipRequest
+	if zero.Mode != ModeSingle {
+		t.Errorf("zero-value TipRequest.Mode = %v, want ModeSingle", zero.Mode)
+	}
+
+	var got TipRequest
+	p := TipFunc(func(req TipRequest) string {
+		got = req
+		return ""
+	})
+	p.Tip(TipRequest{CorrectKey: "por", Mode: ModeText})
+
+	if got.Mode != ModeText {
+		t.Errorf("provider observed Mode = %v, want ModeText", got.Mode)
+	}
+}
