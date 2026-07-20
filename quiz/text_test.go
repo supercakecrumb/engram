@@ -103,6 +103,43 @@ func TestTextMatcherMatch(t *testing.T) {
 	}
 }
 
+func TestTextMatcherShortCodesRequireNearExact(t *testing.T) {
+	tests := []struct {
+		name        string
+		accept      []string
+		typed       string
+		wantCorrect bool
+	}{
+		// False positives to kill: "idk" is within Levenshtein 2 of some
+		// 2-letter ISO codes, but must not grade correct.
+		{"idk vs Pakistan/PK/PAK", []string{"Pakistan", "PK", "PAK"}, "idk", false},
+		{"idk vs Taiwan/TW/TWN", []string{"Taiwan", "TW", "TWN"}, "idk", false},
+		{"idk vs Bangladesh/BD/BGD", []string{"Bangladesh", "BD", "BGD"}, "idk", false},
+
+		// Real words must still tolerate typos.
+		{"spain (case-fold)", []string{"Spain", "ES", "ESP"}, "spain", true},
+		{"Spain exact", []string{"Spain", "ES", "ESP"}, "Spain", true},
+		{"germony (1 typo)", []string{"Germany", "DE", "DEU"}, "germony", true},
+		{"germeny (edit-dist 2)", []string{"Germany", "DE", "DEU"}, "germeny", true},
+
+		// Exact short codes still work.
+		{"pk vs PK (case-fold)", []string{"PK"}, "pk", true},
+		{"PK exact", []string{"PK"}, "PK", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := TextMatcher{Accept: tt.accept, MaxEdits: 2}
+			correct, rating := m.Match(tt.typed)
+			if correct != tt.wantCorrect {
+				t.Errorf("Match(%q) against %v correct = %v, want %v", tt.typed, tt.accept, correct, tt.wantCorrect)
+			}
+			if wantRating := engram.RatingForAnswer(tt.wantCorrect); rating != wantRating {
+				t.Errorf("Match(%q) rating = %v, want %v", tt.typed, rating, wantRating)
+			}
+		})
+	}
+}
+
 func TestTextMatcherMaxEditsExactlyAtBoundary(t *testing.T) {
 	m := TextMatcher{Accept: []string{"kitten"}, MaxEdits: 3}
 

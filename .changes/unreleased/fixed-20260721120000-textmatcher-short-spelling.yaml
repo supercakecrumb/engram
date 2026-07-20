@@ -1,0 +1,2 @@
+kind: Fixed
+body: quiz.TextMatcher.Match now scales its Levenshtein tolerance to the length of each accepted spelling (min(MaxEdits, len-2), floored at 0), so short accepted spellings such as 2-letter ISO country codes require near-exact matches. Fixes false positives where unrelated short input (e.g. "idk") graded correct against short codes like "PK"/"PAK" purely on edit distance; typo tolerance for real words is unchanged.

@@ -14,8 +14,11 @@ type TextMatcher struct {
 }
 
 // Match reports whether typed matches any accepted spelling after Normalize
-// (Unicode casefold + trim + internal-space collapse) within MaxEdits
-// (Levenshtein). Deterministic, no rng. Empty typed ⇒ false.
+// (Unicode casefold + trim + internal-space collapse) within a Levenshtein
+// tolerance. The tolerance for each accepted spelling is
+// min(MaxEdits, max(0, len(spelling)-2)), so short spellings (e.g. 2-letter
+// ISO codes) require near-exact matches and cannot be reached by unrelated
+// short input on distance alone. Deterministic, no rng. Empty typed ⇒ false.
 func (m TextMatcher) Match(typed string) (correct bool, r engram.Rating) {
 	nt := Normalize(typed)
 	if nt == "" {
@@ -23,7 +26,22 @@ func (m TextMatcher) Match(typed string) (correct bool, r engram.Rating) {
 	}
 
 	for _, a := range m.Accept {
-		if Levenshtein(nt, Normalize(a)) <= m.MaxEdits {
+		na := Normalize(a)
+		// Scale the edit tolerance to the length of the accepted spelling:
+		// a spelling of L runes tolerates at most L-2 edits (so a 3-char
+		// code allows 1 edit and a 1- or 2-char code requires an exact
+		// match), floored at 0 and capped at MaxEdits. Real words (L>=4)
+		// keep the full MaxEdits tolerance, while very short accepted
+		// spellings (e.g. 2-letter ISO codes like "pk") can no longer be
+		// reached by unrelated short input such as "idk" on distance alone.
+		tol := m.MaxEdits
+		if limit := len([]rune(na)) - 2; limit < tol {
+			if limit < 0 {
+				limit = 0
+			}
+			tol = limit
+		}
+		if Levenshtein(nt, na) <= tol {
 			return true, engram.RatingForAnswer(true)
 		}
 	}
